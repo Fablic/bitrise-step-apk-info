@@ -1,12 +1,9 @@
 #!/bin/bash
-
-THIS_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 set -e
 
-export BUNDLE_GEMFILE="$THIS_SCRIPT_DIR/Gemfile"
+cd `dirname $0`
 
 bundle update --bundler
 BUNDLER_WITHOUT=test bundle install --jobs 20 --retry 5
 
-bundle exec ruby "$THIS_SCRIPT_DIR/step.rb" -a "${apk_path}"
+bundle exec ruby "step.rb" -a "${apk_path}"
