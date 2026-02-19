@@ -72,33 +72,6 @@ def filter_app_label(infos)
   return ''
 end
 
-def filter_app_icon(infos, apk_path)
-  # application-icon-65535:'res/mipmap-xxxhdpi-v4/ic_launcher.png'
-  app_icon_match = infos.scan(/application-icon-[0-9]+:\'(.*xxxhdpi.*)\'/)
-  return app_icon_match[-1][0] if app_icon_match && app_icon_match[-1]
-
-  app_icon_match = infos.scan(/application-icon-[0-9]+:\'(.*xxhdpi.*)\'/)
-  return app_icon_match[-1][0] if app_icon_match && app_icon_match[-1]
-
-  app_icon_match = infos.scan(/application-icon-[0-9]+:\'(.*xhdpi.*)\'/)
-  return app_icon_match[-1][0] if app_icon_match && app_icon_match[-1]
-
-  app_icon_match = infos.scan(/application-icon-[0-9]+:\'(.*hdpi.*)\'/)
-  return app_icon_match[-1][0] if app_icon_match && app_icon_match[-1]
-
-  # application-icon-65534:'res/mipmap-anydpi-v26/ic_launcher.xml'
-  app_icon_match = infos.scan(/application-icon-[0-9]+:\'.*\/(.*).xml\'/)
-  return `#{aapt_path} l #{apk_path} | grep #{app_icon_match[0][0]}.png | tail -1`.strip if app_icon_match && app_icon_match[0]
-
-  # application: label='CardsUp' icon='res/mipmap-hdpi-v4/ic_launcher.png'
-  app_icon_regex = 'application: label=\'(?<label>.*)\' icon=\'(?<icon>.*)\''
-  app_icon_match = infos.match(app_icon_regex)
-
-  return app_icon_match.captures[1]  if app_icon_match && app_icon_match.captures
-
-  return ''
-end
-
 def filter_min_sdk_version(infos)
   min_sdk = ''
 
@@ -109,18 +82,6 @@ def filter_min_sdk_version(infos)
   return min_sdk
 end
 
-def unzip_icon(apk_path, icon_apk_path)
-  icon_path = ''
-
-  if icon_apk_path
-    `unzip -p #{apk_path} #{icon_apk_path} > #{File.dirname(apk_path)}/icon.png`
-
-    icon_path = File.dirname(apk_path) + "/icon.png"
-  end
-
-  return icon_path
-end
-
 def get_android_apk_info(apk_path)
   aapt = aapt_path
   infos = `#{aapt} dump badging #{apk_path}`
@@ -128,9 +89,7 @@ def get_android_apk_info(apk_path)
   package_name, version_code, version_name = filter_package_infos(infos)
   app_name = filter_app_label(infos)
   min_sdk = filter_min_sdk_version(infos)
-  icon_apk_path = filter_app_icon(infos, apk_path)
   apk_file_size = File.size(apk_path)
-  icon_path = unzip_icon(apk_path, icon_apk_path)
 
   apk_info_hsh = {
     file_size_bytes: apk_file_size,
@@ -140,8 +99,6 @@ def get_android_apk_info(apk_path)
       version_code: version_code,
       version_name: version_name,
       min_sdk_version: min_sdk,
-      icon_path: icon_path,
-      icon_apk_path: icon_apk_path
     }
   }
 
@@ -191,7 +148,6 @@ begin
   fail 'Failed to export ANDROID_APP_PACKAGE_NAME' unless system("envman", "add", "--key", "ANDROID_APP_PACKAGE_NAME", "--value", apk_info_hsh[:app_info][:package_name])
   fail 'Failed to export ANDROID_APP_VERSION_NAME' unless system("envman", "add", "--key", "ANDROID_APP_VERSION_NAME", "--value", apk_info_hsh[:app_info][:version_name])
   fail 'Failed to export ANDROID_APP_VERSION_CODE' unless system("envman", "add", "--key", "ANDROID_APP_VERSION_CODE", "--value", apk_info_hsh[:app_info][:version_code])
-  fail 'Failed to export ANDROID_ICON_PATH' unless system("envman", "add", "--key", "ANDROID_ICON_PATH", "--value", apk_info_hsh[:app_info][:icon_path])
 rescue => ex
   fail_with_message(ex)
 end
